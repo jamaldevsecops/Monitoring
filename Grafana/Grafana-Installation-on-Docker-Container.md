@@ -90,15 +90,13 @@ docker network create grafana_net
 ## 8. 📄 Create Docker Compose File for Grafana
 Create `docker-compose.yml`:
 ```yaml
-version: "3.9"
-
 services:
   grafana:
     image: grafana/grafana:latest
     container_name: grafana-server
     user: "472:472"
     ports:
-      - "3000:3000"
+      - "10.210.2.117:3000:3000"
     restart: always
     environment:
       - GF_SECURITY_ADMIN_USER=admin
@@ -112,8 +110,16 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
-    mem_limit: 1024m
-    cpus: 1.0
+    read_only: true
+    deploy:
+      resources:
+        limits:
+          memory: 1024M
+          cpus: "0.25"
+          pids: 100
+    security_opt:
+      - no-new-privileges:true
+      - label:type:container_t # [For Fedora Based OS Only]
     networks:
       - grafana_net
 
