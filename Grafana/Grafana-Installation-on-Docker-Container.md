@@ -1,104 +1,123 @@
-# 🏗️ Production-Grade Grafana Installation Guide (Docker Compose)
+# Deploy Grafana Using Docker and Docker Compose
 
-## 📋 Overview
+## 1. Objective
+This SOP outlines the steps to deploy Grafana using Docker and Docker Compose on a Linux system. It covers creating a dedicated `devops` user, preparing directories, configuring Docker Compose, and running Grafana as a container.
 
-This guide provides step-by-step instructions for deploying **Grafana** in a **production-grade Docker environment** using **Docker Compose**.  
-It ensures **proper permissions, persistence, environment isolation**, and ease of maintenance — ideal for production, staging, or internal monitoring setups.
+## 2. Prerequisites
+- A Linux server (RHEL, CentOS, Fedora, Ubuntu, or similar)  
+- Sudo/root access  
+- Network connectivity to download packages and Docker images  
+- Docker and Docker Compose installed  
+- Optional: External Docker network `grafana_net`
 
----
-
-## ⚙️ Prerequisites
-
-Before proceeding, make sure you have:
-
-- 🐳 **Docker** (v20+)
-- ⚙️ **Docker Compose** (v2+)
-- 🌐 Internet access (for pulling images)
-- 💾 Sufficient disk space for persistent storage
-
----
-
-## 📁 Directory Structure
-
-Create a working directory for Grafana setup:
-
+## 3. Update System Packages
 ```bash
-mkdir -p ~/containers/grafana/{data,config}
-cd ~/containers/grafana
+sudo dnf -y update   # For RHEL/CentOS/Fedora
+# OR for Ubuntu/Debian
+sudo apt update && sudo -y upgrade
 ```
 
-Your structure should look like this:
-
-```
-~/containers/grafana/
-├── docker-compose.yml
-├── config/
-└── data/
-```
-
----
-
-## 🧾 Step 1: Verify Grafana Container User
-
-Run the Grafana container interactively to check its default user and UID/GID:
-
+## 4. Install Docker
+1. Download Docker installation script:
 ```bash
-docker run --rm -it grafana/grafana:latest sh
-whoami
-# Expected Output: grafana
-id grafana
-# Expected Output: uid=472(grafana) gid=472(grafana) groups=472(grafana)
-exit
+curl -fsSL https://get.docker.com -o get-docker.sh
 ```
-
-> This ensures we apply correct ownership to persistent directories.
-
----
-
-## 🧾 Step 2: Set Proper Permissions
-
-Apply ownership to the directories using the Grafana UID/GID:
-
+2. Execute the installation script:
 ```bash
-chown -R 472:472 data config
+sh get-docker.sh
+```
+3. Start Docker service and enable on boot:
+```bash
+sudo systemctl start docker
+sudo systemctl enable docker
+```
+4. Add non-root user to run Docker commands:
+```bash
+sudo usermod -aG docker devops
+```
+5. Lock Docker packages to prevent accidental upgrades:
+```bash
+sudo dnf versionlock add docker-ce docker-ce-cli containerd.io docker-compose-plugin
+sudo dnf versionlock list
 ```
 
-> This ensures Grafana can read/write to `data` and `config` without permission issues.
+## 5. Install Docker Compose
+1. Download Docker Compose binary:
+```bash
+sudo curl -SL https://github.com/docker/compose/releases/download/v2.40.0/docker-compose-linux-x86_64 -o /usr/local/bin/docker-compose
+```
+2. Set executable permissions:
+```bash
+sudo chmod 755 /usr/local/bin/docker-compose
+```
+3. Create symbolic link:
+```bash
+sudo ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose
+```
+4. Verify installation:
+```bash
+docker-compose version
+```
 
----
+## 6. Create DevOps User and Assign Docker Permissions
+1. Add a new user:
+```bash
+sudo useradd devops
+```
+2. Add `devops` user to Docker group:
+```bash
+sudo usermod -aG docker devops
+```
+3. Apply group changes:
+```bash
+newgrp docker
+```
 
-## 🧾 Step 3: Create Docker Network
-
-Create a dedicated Docker network for Grafana and related services:
-
+## 7. Prepare Grafana Deployment Directory
+```bash
+mkdir -p ~/containers/grafana-server && cd ~/containers/grafana-server
+mkdir data logs provisioning
+```
+Set proper ownership:
+```bash
+sudo chown -R 472:472 data logs provisioning
+```
+Create Docker network:
 ```bash
 docker network create grafana_net
 ```
 
----
-
-## 🧾 Step 4: Create Docker Compose File
-
-Create a file named **docker-compose.yml**:
-
+## 8. Create Docker Compose File for Grafana
+Create `docker-compose.yml`:
 ```yaml
-version: '3.9'
+version: "3.9"
 
 services:
   grafana:
     image: grafana/grafana:latest
-    container_name: grafana
-    restart: unless-stopped
+    container_name: grafana-server
+    user: "472:472"
     ports:
       - "3000:3000"
+    restart: always
     environment:
+      - GF_PATHS_CONFIG=/etc/grafana/grafana.ini
+      - GF_PATHS_DATA=/var/lib/grafana
+      - GF_PATHS_LOGS=/var/log/grafana
+      - GF_PATHS_PLUGINS=/var/lib/grafana/plugins
       - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=StrongPassword123!
-      - GF_USERS_ALLOW_SIGN_UP=false
-      - GF_SERVER_ROOT_URL=http://localhost:3000
+      - GF_SECURITY_ADMIN_PASSWORD=admin
     volumes:
-      - ./data:/var/lib/grafana
-      - ./config:/etc/grafana
+      - ./data:/var/lib/grafana:z
+      - ./logs:/var/log/grafana:z
+      - ./provisioning:/etc/grafana/provisioning:ro,z
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    mem_limit: 1024m
+    cpus: 1.0
     networks:
       - grafana_net
 
@@ -107,154 +126,21 @@ networks:
     external: true
 ```
 
-### 🧠 Notes
-
-- `GF_SECURITY_ADMIN_USER` and `GF_SECURITY_ADMIN_PASSWORD` define Grafana admin credentials.
-- The `data` and `config` directories are mapped for **persistent storage**.
-- The container restarts automatically on failure.
-- The external `grafana_net` network allows you to connect **Prometheus**, **Loki**, etc.
-
----
-
-## 🧾 Step 5: Start Grafana
-
-Run the following command to start Grafana:
-
+## 9. Deploy Grafana Server
 ```bash
 docker-compose up -d
-```
-
-Check the running container:
-
-```bash
 docker ps
+docker-compose ps
 ```
 
-You should see output similar to:
+## 10. Post-Deployment Notes
+- Grafana URL: `http://<server_ip>:3000`  
+- Default login: User=`admin`, Password=`admin` (change after login)  
+- Logs: `~/containers/grafana-server/logs/`  
+- Provisioning configs in `provisioning/` folder
 
-```
-CONTAINER ID   IMAGE                 STATUS         PORTS
-abc12345def6   grafana/grafana:latest   Up 10s     0.0.0.0:3000->3000/tcp
-```
-
----
-
-## 🌐 Step 6: Access Grafana Dashboard
-
-Open your browser and navigate to:
-
-👉 **http://localhost:3000**
-
-Login with the credentials defined in your environment (default: `admin / StrongPassword123!`).
-
----
-
-## 🧰 Step 7: Configure Data Sources
-
-Once logged in, configure your data sources:
-
-1. Go to **Connections → Data Sources**
-2. Click **Add Data Source**
-3. Select from options like:
-   - **Prometheus** (`http://prometheus:9090`)
-   - **Loki** (`http://loki:3100`)
-   - **MySQL / PostgreSQL / InfluxDB**
-
----
-
-## 📦 Step 8: Persist and Backup
-
-To make your deployment production-grade:
-
-1. **Use named volumes** or mount to external storage (e.g., NFS, EBS, NAS).  
-2. **Regularly back up** `~/containers/grafana/data`.  
-3. **Version control** your configuration under `~/containers/grafana/config`.  
-
-Example backup command:
-
+Optional: Check container health:
 ```bash
-tar -czvf grafana-backup-$(date +%F).tar.gz ~/containers/grafana/data
+docker inspect -f '{{.State.Health.Status}}' grafana-server
 ```
 
----
-
-## 🧱 Step 9: Add Prometheus (Optional)
-
-Extend your stack by adding **Prometheus** for metrics collection:
-
-```yaml
-  prometheus:
-    image: prom/prometheus:latest
-    container_name: prometheus
-    restart: unless-stopped
-    volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml
-    ports:
-      - "9090:9090"
-    networks:
-      - grafana_net
-```
-
-Then, configure Grafana to use `http://prometheus:9090` as a data source.
-
----
-
-## 🔒 Step 10: Secure Your Deployment
-
-For a production environment, ensure you:
-
-- Use **strong admin credentials**
-- Enable **HTTPS** with a reverse proxy (Nginx or Traefik)
-- Configure **LDAP or OAuth** for authentication
-- Enable **alerting** and **notifications**
-- Restrict **inbound ports** using a firewall
-
-Example Nginx reverse proxy snippet:
-
-```nginx
-server {
-    listen 443 ssl;
-    server_name grafana.example.com;
-
-    ssl_certificate /etc/ssl/certs/fullchain.pem;
-    ssl_certificate_key /etc/ssl/private/privkey.pem;
-
-    location / {
-        proxy_pass http://localhost:3000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-    }
-}
-```
-
----
-
-## 🧩 Troubleshooting
-
-| Issue | Possible Cause | Solution |
-|-------|----------------|-----------|
-| Grafana won’t start | Permission error | `chown -R 472:472 data config` |
-| Login fails | Wrong password | Reset via `GF_SECURITY_ADMIN_PASSWORD` |
-| Cannot reach Prometheus | Network misconfig | Ensure both containers share the `grafana_net` network |
-| Data not persisting | Volume misconfig | Verify `./data` is mapped correctly |
-
----
-
-## 🏁 Summary
-
-With this setup, you now have a **production-ready Grafana** instance running in Docker Compose with:
-
-- **Correct user permissions** for persistent data  
-- **Dedicated Docker network** for isolation  
-- **Persistent configuration and storage**  
-- **Extensible architecture** (Prometheus, Loki, etc.)  
-- Ready for **HTTPS, authentication, and alerting**  
-
----
-
-## 🔗 References
-
-- [Grafana Official Docs](https://grafana.com/docs/)
-- [Grafana Docker Hub](https://hub.docker.com/r/grafana/grafana)
-- [Grafana GitHub Repository](https://github.com/grafana/grafana)
-- [Docker Compose Docs](https://docs.docker.com/compose/)
