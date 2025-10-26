@@ -3,7 +3,7 @@
 ## 📋 Overview
 
 This guide provides step-by-step instructions for deploying **Grafana** in a **production-grade Docker environment** using **Docker Compose**.  
-It ensures persistence, environment isolation, and ease of maintenance — ideal for production, staging, or internal monitoring setups.
+It ensures **proper permissions, persistence, environment isolation**, and ease of maintenance — ideal for production, staging, or internal monitoring setups.
 
 ---
 
@@ -23,14 +23,14 @@ Before proceeding, make sure you have:
 Create a working directory for Grafana setup:
 
 ```bash
-mkdir -p /opt/grafana/{data,config}
-cd /opt/grafana
+mkdir -p ~/containers/grafana/{data,config}
+cd ~/containers/grafana
 ```
 
 Your structure should look like this:
 
 ```
-/opt/grafana/
+~/containers/grafana/
 ├── docker-compose.yml
 ├── config/
 └── data/
@@ -38,7 +38,46 @@ Your structure should look like this:
 
 ---
 
-## 🧾 Step 1: Create Docker Compose File
+## 🧾 Step 1: Verify Grafana Container User
+
+Run the Grafana container interactively to check its default user and UID/GID:
+
+```bash
+docker run --rm -it grafana/grafana:latest sh
+whoami
+# Expected Output: grafana
+id grafana
+# Expected Output: uid=472(grafana) gid=472(grafana) groups=472(grafana)
+exit
+```
+
+> This ensures we apply correct ownership to persistent directories.
+
+---
+
+## 🧾 Step 2: Set Proper Permissions
+
+Apply ownership to the directories using the Grafana UID/GID:
+
+```bash
+chown -R 472:472 data config
+```
+
+> This ensures Grafana can read/write to `data` and `config` without permission issues.
+
+---
+
+## 🧾 Step 3: Create Docker Network
+
+Create a dedicated Docker network for Grafana and related services:
+
+```bash
+docker network create grafana_net
+```
+
+---
+
+## 🧾 Step 4: Create Docker Compose File
 
 Create a file named **docker-compose.yml**:
 
@@ -61,34 +100,23 @@ services:
       - ./data:/var/lib/grafana
       - ./config:/etc/grafana
     networks:
-      - monitoring
+      - grafana_net
 
 networks:
-  monitoring:
-    driver: bridge
+  grafana_net:
+    external: true
 ```
 
 ### 🧠 Notes
+
 - `GF_SECURITY_ADMIN_USER` and `GF_SECURITY_ADMIN_PASSWORD` define Grafana admin credentials.
-- The `data` directory is mapped for **persistent storage**.
+- The `data` and `config` directories are mapped for **persistent storage**.
 - The container restarts automatically on failure.
-- The `monitoring` network allows you to connect **Prometheus** or **Loki** containers later.
+- The external `grafana_net` network allows you to connect **Prometheus**, **Loki**, etc.
 
 ---
 
-## 🧾 Step 2: Set Proper Permissions
-
-Ensure Grafana can write to its local storage:
-
-```bash
-sudo chown -R 472:472 data
-```
-
-> **Note:** UID `472` is the default Grafana user inside the container.
-
----
-
-## 🧾 Step 3: Start Grafana
+## 🧾 Step 5: Start Grafana
 
 Run the following command to start Grafana:
 
@@ -111,7 +139,7 @@ abc12345def6   grafana/grafana:latest   Up 10s     0.0.0.0:3000->3000/tcp
 
 ---
 
-## 🌐 Step 4: Access Grafana Dashboard
+## 🌐 Step 6: Access Grafana Dashboard
 
 Open your browser and navigate to:
 
@@ -121,7 +149,7 @@ Login with the credentials defined in your environment (default: `admin / Strong
 
 ---
 
-## 🧰 Step 5: Configure Data Sources
+## 🧰 Step 7: Configure Data Sources
 
 Once logged in, configure your data sources:
 
@@ -134,23 +162,23 @@ Once logged in, configure your data sources:
 
 ---
 
-## 📦 Step 6: Persist and Backup
+## 📦 Step 8: Persist and Backup
 
 To make your deployment production-grade:
 
-1. **Use named volumes** or mount to an external storage (e.g., NFS, EBS, or NAS).  
-2. **Regularly back up** `/opt/grafana/data`.  
-3. **Version control** your configuration under `/opt/grafana/config`.  
+1. **Use named volumes** or mount to external storage (e.g., NFS, EBS, NAS).  
+2. **Regularly back up** `~/containers/grafana/data`.  
+3. **Version control** your configuration under `~/containers/grafana/config`.  
 
 Example backup command:
 
 ```bash
-tar -czvf grafana-backup-$(date +%F).tar.gz /opt/grafana/data
+tar -czvf grafana-backup-$(date +%F).tar.gz ~/containers/grafana/data
 ```
 
 ---
 
-## 🧱 Step 7: Add Prometheus (Optional)
+## 🧱 Step 9: Add Prometheus (Optional)
 
 Extend your stack by adding **Prometheus** for metrics collection:
 
@@ -164,19 +192,19 @@ Extend your stack by adding **Prometheus** for metrics collection:
     ports:
       - "9090:9090"
     networks:
-      - monitoring
+      - grafana_net
 ```
 
 Then, configure Grafana to use `http://prometheus:9090` as a data source.
 
 ---
 
-## 🔒 Step 8: Secure Your Deployment
+## 🔒 Step 10: Secure Your Deployment
 
 For a production environment, ensure you:
 
 - Use **strong admin credentials**
-- Enable **HTTPS** with reverse proxy (Nginx or Traefik)
+- Enable **HTTPS** with a reverse proxy (Nginx or Traefik)
 - Configure **LDAP or OAuth** for authentication
 - Enable **alerting** and **notifications**
 - Restrict **inbound ports** using a firewall
@@ -205,22 +233,22 @@ server {
 
 | Issue | Possible Cause | Solution |
 |-------|----------------|-----------|
-| Grafana won’t start | Permission error | `sudo chown -R 472:472 data` |
+| Grafana won’t start | Permission error | `chown -R 472:472 data config` |
 | Login fails | Wrong password | Reset via `GF_SECURITY_ADMIN_PASSWORD` |
-| Cannot reach Prometheus | Network misconfig | Ensure both containers share the `monitoring` network |
+| Cannot reach Prometheus | Network misconfig | Ensure both containers share the `grafana_net` network |
 | Data not persisting | Volume misconfig | Verify `./data` is mapped correctly |
 
 ---
 
-## 🧠 Summary
+## 🏁 Summary
 
 With this setup, you now have a **production-ready Grafana** instance running in Docker Compose with:
 
-- Persistent data storage  
-- Configurable environment variables  
-- Network isolation  
-- Easy extensibility (Prometheus, Loki, etc.)  
-- Ready for HTTPS and reverse proxy
+- **Correct user permissions** for persistent data  
+- **Dedicated Docker network** for isolation  
+- **Persistent configuration and storage**  
+- **Extensible architecture** (Prometheus, Loki, etc.)  
+- Ready for **HTTPS, authentication, and alerting**  
 
 ---
 
