@@ -17,7 +17,13 @@ Node Exporter exposes system metrics (CPU, memory, disk, network, etc.) that can
 
 ## 3. 📂 Prepare Node Exporter Deployment Directory
 Create directories for configuration and logs:
-
+```
+[devops@ngd-dc1-k8s-master1 node-exporter]$ docker run --rm -it --entrypoint /bin/sh prom/node-exporter 
+/ $ whoami
+nobody
+/ $ id nobody
+uid=65534(nobody) gid=65534(nobody) groups=65534(nobody)
+```
 ```bash
 mkdir -p ~/containers/node-exporter && cd ~/containers/node-exporter
 mkdir node_exporter_logs
