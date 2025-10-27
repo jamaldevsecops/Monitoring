@@ -92,6 +92,13 @@ mkdir prometheus_data prometheus_config prometheus_logs
 ```
 
 Set proper ownership:
+```
+docker run --rm -it --entrypoint /bin/sh prom/prometheus:latest
+/prometheus $ whoami
+nobody
+/prometheus $ id nobody
+uid=65534(nobody) gid=65534(nobody) groups=65534(nobody)
+```
 ```bash
 sudo chown -R 65534:65534 prometheus_data prometheus_config prometheus_logs
 ```
