@@ -16,23 +16,9 @@ Node Exporter exposes system metrics (CPU, memory, disk, network, etc.) that can
 ---
 
 ## 3. 📂 Prepare Node Exporter Deployment Directory
-Create directories for configuration and logs:
-```
-[devops@ngd-dc1-k8s-master1 node-exporter]$ docker run --rm -it --entrypoint /bin/sh prom/node-exporter 
-/ $ whoami
-nobody
-/ $ id nobody
-uid=65534(nobody) gid=65534(nobody) groups=65534(nobody)
-```
+Create directories for configuration:
 ```bash
 mkdir -p ~/containers/node-exporter && cd ~/containers/node-exporter
-mkdir node_exporter_logs
-```
-
-Set proper ownership (Node Exporter runs as `nobody`):
-
-```bash
-sudo chown -R 65534:65534 node_exporter_logs
 ```
 
 If not already created, you may create a shared Docker network:
@@ -49,20 +35,23 @@ Create `docker-compose.yml` under `~/containers/node-exporter/`:
 ```yaml
 services:
   node_exporter:
-    image: prom/node-exporter:latest
+    image: prom/node-exporter:v1.10.2
     container_name: node-exporter
     user: "65534:65534"
     restart: always
     ports:
       - "10.210.2.117:9100:9100"
-    command:
-      - '--path.rootfs=/host'
     volumes:
-      - /:/host:ro,rslave
-      - ./node_exporter_logs:/var/log/node_exporter:z
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--path.rootfs=/rootfs'
     read_only: true
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9100/metrics"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9100/ || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 5
