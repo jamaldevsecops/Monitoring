@@ -1,47 +1,80 @@
-# 🚀 Uptime Kuma Deployment using Docker Compose
+# 🟢 Deploy Uptime Kuma Using Docker and Docker Compose
 
-This SOP provides step-by-step instructions to deploy **Uptime Kuma**, a self-hosted monitoring tool, using Docker Compose.
-
----
-
-## 📦 Prerequisites
-
-Before you begin, make sure you have the following installed on your system:
-
-- 🐳 **Docker**
-- 🧩 **Docker Compose**
-- 🔐 Environment variables file (`.env`) with the following values defined:
-  ```bash
-  ADMIN_EMAIL=you@example.com
-  ADMIN_PASSWORD=YourStrongPassword
-  ```
+## 1. 🎯 Objective
+This SOP outlines the steps to deploy **Uptime Kuma** using Docker and Docker Compose on a Linux system.  
+It includes directory preparation, permissions setup, environment configuration, and container deployment.
 
 ---
 
-## 🗂️ Folder Structure
+## 2. 📋 Prerequisites
+- 🖥️ A Linux server (RHEL, CentOS, Fedora, Ubuntu, or similar)  
+- 🔑 Sudo/root access  
+- 🌐 Internet connectivity to pull Docker images  
+- 🐳 Docker and Docker Compose installed  
+- 🌉 External Docker network: `monitoring` (will be created if not present)
 
+---
+
+## 3. 🔄 Update System Packages
 ```bash
-uptime-kuma/
-├── docker-compose.yml
-├── .env
-└── uptimekuma_data/
+sudo dnf -y update   # For RHEL/CentOS/Fedora
+# OR for Ubuntu/Debian
+sudo apt update && sudo -y upgrade
 ```
 
-> 📝 The `uptimekuma_data` directory stores persistent data for Uptime Kuma.
+---
+
+## 4. 👤 Create DevOps User (if not already present)
+```bash
+sudo useradd devops
+sudo usermod -aG docker devops
+newgrp docker
+```
 
 ---
 
-## ⚙️ Docker Compose Configuration
+## 5. 📂 Directory Setup and Permissions
+Create and set up the directory structure for Uptime Kuma:
+```bash
+mkdir -p ~/containers/uptime-kuma && cd ~/containers/uptime-kuma
+mkdir uptimekuma_data uptimekuma_logs
+```
 
-Below is the complete **docker-compose.yml** configuration for deploying **Uptime Kuma**:
+Determine the container’s running user:
+```bash
+docker run --rm -it --entrypoint /bin/sh elestio/uptime-kuma:latest
+/ $ id
+uid=1000(node) gid=1000(node)
+```
 
+Assign correct ownership:
+```bash
+sudo chown -R 1000:1000 uptimekuma_data uptimekuma_logs
+```
+
+(Optional) Create Docker network if not already available:
+```bash
+docker network create monitoring
+```
+
+---
+
+## 6. ⚙️ Environment Configuration
+Create a `.env` file in the same directory with the following variables:
+```bash
+ADMIN_EMAIL=admin@example.com
+ADMIN_PASSWORD=StrongPassword123!
+```
+
+---
+
+## 7. 📄 Create Docker Compose File
+Create `docker-compose.yml` under `~/containers/uptime-kuma/`:
 ```yaml
-version: "3.9"
-
 services:
   uptime-kuma:
     image: elestio/uptime-kuma:latest
-    container_name: dc1-uptime-kuma-core
+    container_name: uptime-kuma
     restart: always
     environment:
       ADMIN_EMAIL: ${ADMIN_EMAIL}
@@ -49,9 +82,9 @@ services:
       HTTP_PROXY: http://10.210.2.200:4680
       HTTPS_PROXY: http://10.210.2.200:4680
       NO_PROXY: localhost,127.0.0.1
-
     volumes:
       - ./uptimekuma_data:/app/data:z
+      - ./uptimekuma_logs:/app/logs:z
     ports:
       - "10.210.2.112:30002:3001"
     networks:
@@ -74,107 +107,62 @@ networks:
 
 ---
 
-## ▶️ Deployment Steps
-
-### 🏗️ 1. Create Project Directory
+## 8. 🚀 Deploy Uptime Kuma
+Run the container:
 ```bash
-mkdir -p ~/uptime-kuma && cd ~/uptime-kuma
+docker-compose up -d
 ```
 
-### 🧩 2. Create `.env` File
+Verify status:
 ```bash
-cat <<EOF > .env
-ADMIN_EMAIL=you@example.com
-ADMIN_PASSWORD=YourStrongPassword
-EOF
-```
-
-### 🧱 3. Create Data Directory
-```bash
-mkdir -p uptimekuma_data
-```
-
-### 🧾 4. Create `docker-compose.yml`
-Copy the YAML configuration above and paste it into this file.
-
-### 🚀 5. Deploy the Stack
-```bash
-docker compose up -d
-```
-
-### 🧠 6. Verify Deployment
-```bash
-docker ps | grep uptime-kuma
-```
-
-Then open your browser and navigate to:
-
-👉 `http://10.210.2.112:30002`
-
-Login using the credentials from your `.env` file.
-
----
-
-## 🧹 Maintenance
-
-### 🔁 Restart the Container
-```bash
-docker compose restart uptime-kuma
-```
-
-### 📜 View Logs
-```bash
-docker compose logs -f uptime-kuma
-```
-
-### 💾 Backup Data
-```bash
-tar -czvf uptimekuma_backup_$(date +%F).tar.gz uptimekuma_data/
-```
-
-### 🗑️ Remove Everything (if needed)
-```bash
-docker compose down -v
+docker ps
+docker-compose ps
 ```
 
 ---
 
-## ⚙️ Resource Configuration
+## 9. 🧩 Post-Deployment Notes
+- 🌐 Web Interface: `http://10.210.2.112:30002`  
+- 🔑 Admin Login: use credentials from `.env` file  
+- 📄 Data Directory: `~/containers/uptime-kuma/uptimekuma_data/`  
+- 🪵 Logs Directory: `~/containers/uptime-kuma/uptimekuma_logs/`  
 
-| Resource | Limit |
-|-----------|--------|
-| 🧠 Memory | 2048 MB |
-| 🧮 CPU | 1 Core |
-| 🧍 PIDs | 100 |
+Check container logs:
+```bash
+docker logs -f uptime-kuma
+```
 
-> 🧱 The configuration uses SELinux and Docker security options (`no-new-privileges` and `read_only`) for extra protection.
+Health check:
+```bash
+curl -I http://10.210.2.112:30002
+```
 
----
-
-## 🛡️ Security Recommendations
-
-✅ Use strong admin credentials in your `.env` file  
-✅ Run Uptime Kuma behind a reverse proxy (e.g., Nginx or Traefik)  
-✅ Enable HTTPS if running in production  
-✅ Regularly back up the `/app/data` volume
-
----
-
-## 🎯 Summary
-
-| Component | Description |
-|------------|-------------|
-| 🧩 **Image** | elestio/uptime-kuma:latest |
-| 🧠 **Purpose** | Self-hosted uptime monitoring tool |
-| 🌐 **Port Mapping** | 10.210.2.112:30002 → 3001 |
-| 💾 **Volume** | ./uptimekuma_data → /app/data |
-| 🔒 **Security** | Read-only container, SELinux enabled |
+Restart container:
+```bash
+docker-compose restart
+```
 
 ---
 
-### ✅ Deployment Complete!
+## 10. 🧹 Maintenance Tips
+- Backup the `uptimekuma_data` folder regularly.  
+- Update the container image monthly:
+  ```bash
+  docker-compose pull
+  docker-compose up -d
+  ```
+- Check disk usage:
+  ```bash
+  du -sh ~/containers/uptime-kuma/uptimekuma_data
+  ```
 
-Uptime Kuma should now be accessible at:  
-👉 **http://10.210.2.112:30002**
+---
 
-Enjoy your self-hosted uptime monitoring dashboard!
+## ✅ Summary
+This guide provides a production-ready setup for **Uptime Kuma** using Docker and Docker Compose with:
+- Proper directory structure  
+- Secure file permissions  
+- Proxy and environment configuration  
+- Resource limits and security hardening
+
+---
