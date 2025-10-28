@@ -71,6 +71,32 @@ networks:
   prometheus_net:
     external: true
 ```
+Or, 
+```bash
+services:
+  node_exporter:
+    image: prom/node-exporter:v1.10.2
+    container_name: node-exporter
+    command:
+      - '--path.rootfs=/host'
+    network_mode: host        # Binds directly to host network
+    pid: host                 # Access host processes
+    restart: always
+    volumes:
+      - '/:/host:ro,rslave'  # Full root filesystem, read-only
+    read_only: true
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9100/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "0.15"
+          pids: 500  # Optional; container sees all host PIDs
+```
 
 ---
 
