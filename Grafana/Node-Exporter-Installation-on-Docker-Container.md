@@ -72,7 +72,7 @@ networks:
     external: true
 ```
 Or, 
-```bash
+```yaml
 services:
   node_exporter:
     image: prom/node-exporter:v1.10.2
