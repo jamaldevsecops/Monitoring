@@ -19,6 +19,7 @@ This guide installs **Kube Prometheus Stack** using Helm and configures **Ingres
 ## ⚙️ Step 1: Add Helm Repo and Update
 
 ```bash
+helm repo list
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
 helm repo update
 ```
