@@ -1,201 +1,192 @@
-# 📊 Kube Prometheus Stack Deployment with Helm
-This guide installs **Kube Prometheus Stack** using Helm and configures **Ingress** resources to access Grafana and Prometheus dashboards using custom domain names (e.g., `grafana.apsis.localnet`, `prometheus.apsis.localnet`).
+# 🚀 Deploying kube-prometheus-stack (with External Ingress)
 
----
-
-## 🧩 Prerequisites
-
-- Kubernetes cluster (v1.25+ recommended)
-- Helm 3.x installed
-- Ingress Controller already configured (e.g., NGINX, Traefik)
-- DNS or `/etc/hosts` entries for:
-  ```
-  grafana.apsis.localnet     → <ingress-controller-ip>
-  prometheus.apsis.localnet  → <ingress-controller-ip>
+## 🧩 1. Prerequisites
+Make sure you have:
+- A working **Kubernetes cluster**  
+- **Helm 3.8+** installed  
+- **NGINX Ingress Controller** running  
+- A namespace for monitoring:
+  ```bash
+  kubectl create namespace monitoring
   ```
 
 ---
 
-## 🧠 Step 1: Create Values File
+## ⚙️ 2. Create `values.yaml`
 
-Save the following as **`values.yaml`**:
+Since you’re using your own external `Ingress` objects, **disable** the built-in ingress in the Helm chart.
 
 ```yaml
-# values.yaml for kube-prometheus-stack with Ingress and IP Whitelisting
-
-# Global settings (optional; adjust as needed)
-defaultRules:
-  create: true
-  rules:
-    etcd: false  # Disable if not using etcd
-    general: true
-    kubeApiserver: false  # Enable if monitoring API server
-    kubeScheduler: true
-    kubelet: true
-    kubernetesSystem: true
-    kubeControllerManager: false
-
-# Grafana configuration
+# values.yaml
 grafana:
   enabled: true
-  adminPassword: prom-operator  # Change this for production
+  adminPassword: "admin123"
   ingress:
-    enabled: true
-    ingressClassName: nginx  # Set to your Ingress class; omit if default
-    annotations:
-      nginx.ingress.kubernetes.io/whitelist-source-range: "192.168.0.0/24"
-      # Add other annotations if needed, e.g., for auth or rewrite
-    hosts:
-      - grafana.apsis.localnet
-    path: /
-    pathType: Prefix
-    tls: []  # Add TLS secrets if enabling HTTPS, e.g., - secretName: grafana-tls
+    enabled: false
 
-# Prometheus configuration
 prometheus:
-  prometheusSpec:
-    # Default scrape config; adjust as needed
-    serviceMonitorSelectorNilUsesHelmValues: false
   ingress:
-    enabled: true
-    ingressClassName: nginx  # Set to your Ingress class; omit if default
-    annotations:
-      nginx.ingress.kubernetes.io/whitelist-source-range: "192.168.0.0/24"
-      # Optional: Rewrite for subpaths if needed
-      # nginx.ingress.kubernetes.io/rewrite-target: /
-    hosts:
-      - prometheus.apsis.localnet
-    path: /
-    pathType: Prefix
-    tls: []  # Add TLS if needed
+    enabled: false
 
-# Alertmanager configuration
 alertmanager:
-  enabled: true
   ingress:
-    enabled: true
-    ingressClassName: nginx  # Set to your Ingress class; omit if default
-    annotations:
-      nginx.ingress.kubernetes.io/whitelist-source-range: "192.168.0.0/24"
-    hosts:
-      - alertmanager.apsis.localnet
-    path: /
-    pathType: Prefix
-    tls: []  # Add TLS if needed
-
-# Dependencies (enabled by default)
-kubeStateMetrics:
-  enabled: true
-
-nodeExporter:
-  enabled: true
-
-# Optional: Disable other components if not needed
-# e.g., prometheusOperator:
-#   enabled: true  # Keeps the operator
+    enabled: false
 ```
-
-This configuration:
-- Enables Grafana, Prometheus, and Alertmanager Ingress
-- Restricts access to the `192.168.0.0/24` network only
-- Uses NGINX ingress class
-- No TLS (you can add cert-manager later)
 
 ---
 
-## 🚀 Step 2: Install Kube Prometheus Stack
+## 🧭 3. Install the Chart
 
 ```bash
-helm install monitoring oci://ghcr.io/prometheus-community/charts/kube-prometheus-stack \
-  -n monitoring \
-  --create-namespace \
-  -f values.yaml
+helm install monitoring oci://ghcr.io/prometheus-community/charts/kube-prometheus-stack   -n monitoring   -f values.yaml
 ```
 
-This will deploy:
-- Prometheus
-- Alertmanager
-- Grafana
-- Node Exporters
-- Kube-state metrics
+✅ This deploys kube-prometheus-stack into the `monitoring` namespace.
 
 ---
 
-## 🔍 Step 3: Verify Installation
+## 🌐 4. Create External Ingress Resources
 
+You’ll manually expose Grafana, Prometheus, and Alertmanager through your existing NGINX Ingress controller.
+
+### Grafana
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: grafana-external
+  namespace: monitoring
+  annotations:
+    kubernetes.io/ingress.class: nginx
+spec:
+  rules:
+  - host: grafana.apsis.localnet
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: monitoring-grafana
+            port:
+              number: 80
+```
+
+### Prometheus
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: prometheus-external
+  namespace: monitoring
+  annotations:
+    kubernetes.io/ingress.class: nginx
+spec:
+  rules:
+  - host: prometheus.apsis.localnet
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: monitoring-kube-prometheus-prometheus
+            port:
+              number: 9090
+```
+
+### Alertmanager
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: alertmanager-external
+  namespace: monitoring
+  annotations:
+    kubernetes.io/ingress.class: nginx
+spec:
+  rules:
+  - host: alertmanager.apsis.localnet
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: monitoring-kube-prometheus-alertmanager
+            port:
+              number: 9093
+```
+
+Apply them:
 ```bash
-kubectl get pods -n monitoring
+kubectl apply -f grafana-ingress.yaml
+kubectl apply -f prometheus-ingress.yaml
+kubectl apply -f alertmanager-ingress.yaml
 ```
-Example Output: 
-```
-NAME                                                        READY   STATUS    RESTARTS   AGE
-alertmanager-kube-prometheus-stack-alertmanager-0           2/2     Running   0          13m
-kube-prometheus-stack-grafana-64666c4bdd-g7hjv              3/3     Running   0          14m
-kube-prometheus-stack-kube-state-metrics-557fd457c6-7v2kz   1/1     Running   0          14m
-kube-prometheus-stack-operator-85c8966dbb-4t94r             1/1     Running   0          14m
-kube-prometheus-stack-prometheus-node-exporter-mqwcx        1/1     Running   0          14m
-kube-prometheus-stack-prometheus-node-exporter-tglz6        1/1     Running   0          14m
-kube-prometheus-stack-prometheus-node-exporter-vmmr7        1/1     Running   0          14m
-prometheus-kube-prometheus-stack-prometheus-0               2/2     Running   0          13m
-```
-```bash
-kubectl get svc -n monitoring
-```
-Example Output: 
-```
-NAME                                             TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)                      AGE
-alertmanager-operated                            ClusterIP   None             <none>        9093/TCP,9094/TCP,9094/UDP   15m
-kube-prometheus-stack-alertmanager               ClusterIP   10.108.125.105   <none>        9093/TCP,8080/TCP            15m
-kube-prometheus-stack-grafana                    ClusterIP   10.96.195.71     <none>        80/TCP                       15m
-kube-prometheus-stack-kube-state-metrics         ClusterIP   10.99.119.33     <none>        8080/TCP                     15m
-kube-prometheus-stack-operator                   ClusterIP   10.104.76.210    <none>        443/TCP                      15m
-kube-prometheus-stack-prometheus                 ClusterIP   10.106.123.0     <none>        9090/TCP,8080/TCP            15m
-kube-prometheus-stack-prometheus-node-exporter   ClusterIP   10.111.173.13    <none>        9100/TCP                     15m
-prometheus-operated                              ClusterIP   None             <none>        9090/TCP                     15m
-```
+
+---
+
+## 🔍 5. Verify Access
 
 ```bash
 kubectl get ingress -n monitoring
 ```
 
-Example output:
+Add your ingress IP to `/etc/hosts` if needed:
 
 ```
-NAME                                       READY   STATUS    RESTARTS   AGE
-alertmanager-kube-prometheus-stack-0       2/2     Running   0          2m
-grafana-6f7f85c4c8-m7kvz                  1/1     Running   0          2m
-prometheus-kube-prometheus-stack-prometheus-0   2/2   Running   0   2m
-
-NAME                                     CLASS    HOSTS                      ADDRESS   PORTS   AGE
-kube-prometheus-stack-grafana            nginx    grafana.apsis.localnet     10.0.0.5  80      2m
-kube-prometheus-stack-prometheus         nginx    prometheus.apsis.localnet  10.0.0.5  80      2m
-kube-prometheus-stack-alertmanager       nginx    alertmanager.apsis.localnet 10.0.0.5 80     2m
+<INGRESS-IP> grafana.apsis.localnet
+<INGRESS-IP> prometheus.apsis.localnet
+<INGRESS-IP> alertmanager.apsis.localnet
 ```
+
+Access via browser:
+- Grafana → http://grafana.apsis.localnet  
+- Prometheus → http://prometheus.apsis.localnet  
+- Alertmanager → http://alertmanager.apsis.localnet  
 
 ---
 
-## 🧑‍💻 Step 4: Access Dashboards
+# 🧹 Uninstalling kube-prometheus-stack
 
-| Service | URL | Credentials |
-|----------|-----|--------------|
-| Grafana | http://grafana.apsis.localnet | admin / admin123 |
-| Prometheus | http://prometheus.apsis.localnet | - |
-| Alertmanager | http://alertmanager.apsis.localnet | - |
+When you’re done or want to redeploy cleanly, follow these steps:
 
-> ⚠️ Only clients in the `192.168.0.0/24` network will be allowed by the Ingress whitelist annotation.
-
----
-
-## 🧹 Step 5: Uninstall
-
-If you ever need to remove it:
-
+### 1️⃣ Uninstall Helm Release
+Check the installed release:
 ```bash
-helm uninstall kube-prometheus-stack -n monitoring
-kubectl delete ns monitoring
+helm list -n monitoring
+```
+
+Then uninstall it (replace `monitoring` if your release name differs):
+```bash
+helm uninstall monitoring -n monitoring
 ```
 
 ---
 
-✅ **Done!**  
-You now have Grafana, Prometheus, and Alertmanager accessible with friendly hostnames and restricted network access.
+### 2️⃣ Delete CRDs (optional — for full cleanup)
+```bash
+kubectl delete crd   alertmanagers.monitoring.coreos.com   podmonitors.monitoring.coreos.com   probes.monitoring.coreos.com   prometheuses.monitoring.coreos.com   prometheusrules.monitoring.coreos.com   servicemonitors.monitoring.coreos.com   thanosrulers.monitoring.coreos.com
+```
+
+> ⚠️ Only do this if you’re sure no other apps use these CRDs.
+
+---
+
+### 3️⃣ Delete Namespace (optional)
+```bash
+kubectl delete namespace monitoring
+```
+
+---
+
+### ✅ Summary
+
+| Action | Command |
+|--------|----------|
+| Install | `helm install monitoring oci://ghcr.io/prometheus-community/charts/kube-prometheus-stack -n monitoring -f values.yaml` |
+| Create Ingress | `kubectl apply -f grafana-ingress.yaml -f prometheus-ingress.yaml -f alertmanager-ingress.yaml` |
+| Uninstall | `helm uninstall monitoring -n monitoring` |
+| Delete CRDs | `kubectl delete crd ...` |
+| Delete Namespace | `kubectl delete namespace monitoring` |
