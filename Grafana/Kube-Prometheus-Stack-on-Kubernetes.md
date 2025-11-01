@@ -16,25 +16,7 @@ This guide installs **Kube Prometheus Stack** using Helm and configures **Ingres
 
 ---
 
-## ⚙️ Step 1: Add Helm Repo and Update
-
-```bash
-helm repo list
-helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
-helm repo update
-```
-
----
-
-## 📦 Step 2: Create Namespace
-
-```bash
-kubectl create namespace monitoring
-```
-
----
-
-## 🧠 Step 3: Create Values File
+## 🧠 Step 1: Create Values File
 
 Save the following as **`values.yaml`**:
 
@@ -121,7 +103,7 @@ This configuration:
 
 ---
 
-## 🚀 Step 4: Install Kube Prometheus Stack
+## 🚀 Step 2: Install Kube Prometheus Stack
 
 ```bash
 helm install monitoring oci://ghcr.io/prometheus-community/charts/kube-prometheus-stack \
@@ -139,7 +121,7 @@ This will deploy:
 
 ---
 
-## 🔍 Step 5: Verify Installation
+## 🔍 Step 3: Verify Installation
 
 ```bash
 kubectl get pods -n monitoring
@@ -192,7 +174,7 @@ kube-prometheus-stack-alertmanager       nginx    alertmanager.apsis.localnet 10
 
 ---
 
-## 🧑‍💻 Step 6: Access Dashboards
+## 🧑‍💻 Step 4: Access Dashboards
 
 | Service | URL | Credentials |
 |----------|-----|--------------|
@@ -204,7 +186,7 @@ kube-prometheus-stack-alertmanager       nginx    alertmanager.apsis.localnet 10
 
 ---
 
-## 🧹 Step 7: Uninstall
+## 🧹 Step 5: Uninstall
 
 If you ever need to remove it:
 
