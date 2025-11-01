@@ -86,6 +86,7 @@ This configuration:
 ## 🚀 Step 4: Install Kube Prometheus Stack
 
 ```bash
+helm search repo kube-prometheus-stack
 helm install kube-prometheus-stack prometheus-community/kube-prometheus-stack   -n monitoring   -f values.yaml
 ```
 
