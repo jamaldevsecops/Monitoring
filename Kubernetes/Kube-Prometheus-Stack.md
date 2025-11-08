@@ -103,14 +103,19 @@ defaultRules:
 
 ## 🚀 **3) Install Chart**
 ```bash
-helm upgrade --install kube-prometheus-stack   oci://ghcr.io/prometheus-community/charts/kube-prometheus-stack   --version 79.4.0   -n monitoring   -f values.yaml
+helm upgrade --install kube-prometheus-stack \
+  oci://ghcr.io/prometheus-community/charts/kube-prometheus-stack \
+  --version 79.4.0 \
+  -n monitoring \
+  -f values.yaml
 ```
 
 Or using Helm repo:
 ```bash
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
 helm repo update
-helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack   -n monitoring -f values.yaml
+helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack \
+  -n monitoring -f values.yaml
 ```
 
 ---
@@ -145,7 +150,14 @@ kubectl delete pvc -n monitoring -l app.kubernetes.io/instance=kube-prometheus-s
 ## 🧱 **C) Remove CRDs**
 ```bash
 kubectl get crds | grep monitoring.coreos.com
-kubectl delete crd alertmanagers.monitoring.coreos.com   alertmanagerconfigs.monitoring.coreos.com   podmonitors.monitoring.coreos.com   probes.monitoring.coreos.com   prometheuses.monitoring.coreos.com   prometheusrules.monitoring.coreos.com   servicemonitors.monitoring.coreos.com   thanosrulers.monitoring.coreos.com
+kubectl delete crd alertmanagers.monitoring.coreos.com   \
+  alertmanagerconfigs.monitoring.coreos.com   \
+  podmonitors.monitoring.coreos.com \
+  probes.monitoring.coreos.com   \
+  prometheuses.monitoring.coreos.com   \
+  prometheusrules.monitoring.coreos.com \
+  servicemonitors.monitoring.coreos.com   \
+  thanosrulers.monitoring.coreos.com
 ```
 
 ## ⚙️ **D) Remove Leftovers**
