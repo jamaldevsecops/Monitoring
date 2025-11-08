@@ -146,13 +146,13 @@ If deployed via OCI:
 ```bash
 helm upgrade kube-prometheus-stack \
   oci://ghcr.io/prometheus-community/charts/kube-prometheus-stack \
-  -n monitoring -f values.yaml
+  --version 79.4.0 \
+  -n monitoring \
+  -f values.yaml
 ```
 Or if using the Helm repo:
 ```bash
-helm upgrade kube-prometheus-stack \
-  oci://ghcr.io/prometheus-community/charts/kube-prometheus-stack \
-  --version 79.4.0 \
+helm upgrade kube-prometheus-stack prometheus-community/kube-prometheus-stack \
   -n monitoring \
   -f values.yaml
 ```
