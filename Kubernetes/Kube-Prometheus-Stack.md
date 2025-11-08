@@ -8,9 +8,9 @@ For internal domain: **apsis.localnet**
 - ✅ `kubectl` and `helm` installed
 - ✅ Ingress Controller (NGINX or equivalent)
 - ✅ DNS for:
-  - `grafana.apsis.localnet`
-  - `prometheus.apsis.localnet`
-  - `alertmanager.apsis.localnet`
+  - `grafanax.apsis.localnet`
+  - `prometheusx.apsis.localnet`
+  - `alertmanagerx.apsis.localnet`
   → All pointing to **192.168.20.162**
 
 ---
@@ -36,7 +36,7 @@ grafana:
     enabled: true
     ingressClassName: nginx       # or your class name
     hosts:
-      - grafana.apsis.localnet
+      - grafanax.apsis.localnet
     path: /
     pathType: Prefix
     tls: []                       # add TLS block if you have internal CA/secret
@@ -49,7 +49,7 @@ prometheus:
     enabled: true
     ingressClassName: nginx
     hosts:
-      - prometheus.apsis.localnet
+      - prometheusx.apsis.localnet
     path: /
     pathType: Prefix
     tls: []
@@ -65,7 +65,7 @@ alertmanager:
     enabled: true
     ingressClassName: nginx
     hosts:
-      - alertmanager.apsis.localnet
+      - alertmanagerx.apsis.localnet
     path: /
     pathType: Prefix
     tls: []
@@ -103,7 +103,7 @@ defaultRules:
 
 ## 🚀 **3) Install Chart**
 ```bash
-helm upgrade --install kube-prometheus-stack \
+helm upgrade kube-prometheus-stack \
   oci://ghcr.io/prometheus-community/charts/kube-prometheus-stack \
   --version 79.4.0 \
   -n monitoring \
@@ -120,7 +120,7 @@ helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheu
 
 ---
 
-## 🔍 **5) Verify**
+## 🔍 **4) Verify**
 ```bash
 kubectl get pods -n monitoring
 kubectl get svc -n monitoring
@@ -128,9 +128,54 @@ kubectl get ingress -n monitoring
 ```
 
 Access via browser:
-- 🌐 Grafana → http://grafana.apsis.localnet  
-- 📊 Prometheus → http://prometheus.apsis.localnet  
-- 🚨 Alertmanager → http://alertmanager.apsis.localnet
+- 🌐 Grafana → http://grafanax.apsis.localnet  
+- 📊 Prometheus → http://prometheusx.apsis.localnet  
+- 🚨 Alertmanager → http://alertmanagerx.apsis.localnet
+
+---
+
+# 🔄 **Apply Configuration Changes (values.yaml Updates)**
+
+## ✏️ **1) Edit the values file**
+```bash
+nano ~/kube-prometheus-stack/values.yaml
+```
+
+## ⚡ **2) Apply updated configuration**
+If deployed via OCI:
+```bash
+helm upgrade kube-prometheus-stack \
+  oci://ghcr.io/prometheus-community/charts/kube-prometheus-stack \
+  -n monitoring -f values.yaml
+```
+Or if using the Helm repo:
+```bash
+helm upgrade kube-prometheus-stack prometheus-community/kube-prometheus-stack \
+  -n monitoring -f values.yaml
+```
+
+## 🔍 **3) Verify rollout**
+```bash
+kubectl get pods -n monitoring
+kubectl get ingress -n monitoring
+helm status kube-prometheus-stack -n monitoring
+```
+
+## 🧠 **4) Dry-run test (preview without applying)**
+```bash
+helm upgrade kube-prometheus-stack prometheus-community/kube-prometheus-stack \
+  -n monitoring -f values.yaml --dry-run --debug
+```
+
+## ⏪ **5) Rollback if needed**
+List revisions:
+```bash
+helm history kube-prometheus-stack -n monitoring
+```
+Rollback to a previous version:
+```bash
+helm rollback kube-prometheus-stack <REVISION_NUMBER> -n monitoring
+```
 
 ---
 
@@ -150,13 +195,13 @@ kubectl delete pvc -n monitoring -l app.kubernetes.io/instance=kube-prometheus-s
 ## 🧱 **C) Remove CRDs**
 ```bash
 kubectl get crds | grep monitoring.coreos.com
-kubectl delete crd alertmanagers.monitoring.coreos.com   \
-  alertmanagerconfigs.monitoring.coreos.com   \
+kubectl delete crd alertmanagers.monitoring.coreos.com \
+  alertmanagerconfigs.monitoring.coreos.com \
   podmonitors.monitoring.coreos.com \
-  probes.monitoring.coreos.com   \
-  prometheuses.monitoring.coreos.com   \
+  probes.monitoring.coreos.com \
+  prometheuses.monitoring.coreos.com \
   prometheusrules.monitoring.coreos.com \
-  servicemonitors.monitoring.coreos.com   \
+  servicemonitors.monitoring.coreos.com \
   thanosrulers.monitoring.coreos.com
 ```
 
@@ -174,7 +219,7 @@ kubectl delete namespace monitoring
 ---
 
 ✅ **SOP Verified**  
-This process deploys the full Kube-Prometheus-Stack accessible at:
-- Grafana → `grafana.apsis.localnet`
-- Prometheus → `prometheus.apsis.localnet`
-- Alertmanager → `alertmanager.apsis.localnet`
+This process deploys and manages the full Kube-Prometheus-Stack accessible at:
+- Grafana → `grafanax.apsis.localnet`
+- Prometheus → `prometheusx.apsis.localnet`
+- Alertmanager → `alertmanagerx.apsis.localnet`
