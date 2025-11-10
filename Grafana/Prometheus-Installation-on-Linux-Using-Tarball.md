@@ -20,7 +20,9 @@ sudo wget https://github.com/prometheus/prometheus/releases/download/v3.5.0/prom
 If using a proxy:
 
 ```bash
-wget -e use_proxy=yes -e http_proxy=http://192.168.20.126:8080      -e https_proxy=http://192.168.20.126:8080      https://github.com/prometheus/prometheus/releases/download/v3.5.0/prometheus-3.5.0.linux-amd64.tar.gz
+wget -e use_proxy=yes -e http_proxy=http://192.168.20.126:8080 \
+     -e https_proxy=http://192.168.20.126:8080 \
+     https://github.com/prometheus/prometheus/releases/download/v3.5.0/prometheus-3.5.0.linux-amd64.tar.gz
 ```
 
 Extract and move files:
@@ -77,7 +79,12 @@ After=network-online.target
 User=prometheus
 Group=prometheus
 Type=simple
-ExecStart=/usr/local/bin/prometheus   --config.file=/etc/prometheus/prometheus.yml   --storage.tsdb.path=/var/lib/prometheus/   --storage.tsdb.retention.time=30d   --web.console.templates=/opt/prometheus/consoles   --web.console.libraries=/opt/prometheus/console_libraries
+ExecStart=/usr/local/bin/prometheus \
+  --config.file=/etc/prometheus/prometheus.yml \
+  --storage.tsdb.path=/var/lib/prometheus/ \
+  --storage.tsdb.retention.time=30d \
+  --web.console.templates=/opt/prometheus/consoles \
+  --web.console.libraries=/opt/prometheus/console_libraries
 
 [Install]
 WantedBy=multi-user.target
