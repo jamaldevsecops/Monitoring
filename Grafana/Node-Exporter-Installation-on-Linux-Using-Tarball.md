@@ -1,6 +1,4 @@
 # 🧭 **Deploying Node Exporter on Linux Using Binary**
-📅 **Date:** 2025-11-10  
-
 ---
 
 ### 📘 Overview
