@@ -66,6 +66,10 @@ services:
     ports:
       - "192.168.20.126:9093:9093"
     restart: always
+    environment:
+      HTTP_PROXY: http://192.168.20.126:8080
+      HTTPS_PROXY: http://192.168.20.126:8081
+      NO_PROXY: localhost,127.0.0.1
     volumes:
       - ./alertmanager_data:/alertmanager:z
       - ./alertmanager_config:/etc/alertmanager:ro,z
