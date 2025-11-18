@@ -18,9 +18,10 @@ Node Exporter  ──► 📊 Prometheus  ──► 🚨 Alertmanager  ──►
 - Use **Teams Workflows** to create an incoming webhook.
 - Copy the webhook URL for later use.
 
-### ⚙️ 2. Alertmanager Integration Options
+### ⚙️ 2. Alertmanager Integration Option
 
 #### Native Teams Receiver (Alertmanager >= 0.26)
+Verify the Alertmanager configuration file `alertmanager.yml`.
 ```yaml
 global:
   resolve_timeout: 1m
@@ -40,7 +41,7 @@ receivers:
 ```
 
 ### 📜 3. Prometheus Alert Rules
-Create `rules_node.yml`:
+Create `rules_node.yml` file under `~/prometheus/prometheus_config/` directory:
 ```yaml
 groups:
   - name: node_resource_alerts
@@ -98,6 +99,11 @@ rule_files:
 curl -X POST http://<prometheus-host>:9090/-/reload
 curl -X POST http://<alertmanager-host>:9093/-/reload
 ```
+or, 
+```bash
+docker-compose restart alertmanager
+docker-compose restart prometheues
+```
 
 ---
 
@@ -113,9 +119,9 @@ curl -X POST http://<alertmanager-host>:9093/-/reload
 ```
 prometheus/
   ├─ prometheus_config/
-  │   ├─ prometheus.yml
-  │   └─ rules_node.yml
+      ├─ prometheus.yml
+      └─ rules_node.yml
 alert-manager/
   ├─ alertmanager_config/
-  │   └─ alertmanager.yml
+      └─ alertmanager.yml
 ```
