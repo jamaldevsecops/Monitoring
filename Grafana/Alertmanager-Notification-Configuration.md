@@ -20,7 +20,7 @@ Node Exporter  ──► 📊 Prometheus  ──► 🚨 Alertmanager  ──►
 
 ### ⚙️ 2. Alertmanager Integration Options
 
-#### Option A: Native Teams Receiver (Alertmanager >= 0.26)
+#### Native Teams Receiver (Alertmanager >= 0.26)
 ```yaml
 global:
   resolve_timeout: 1m
@@ -39,29 +39,6 @@ receivers:
         send_resolved: true
 ```
 
-#### Option B: Bridge Container (`prometheus-msteams`)
-Add to `docker-compose.yaml`:
-```yaml
-services:
-  prometheus-msteams:
-    image: quay.io/prometheusmsteams/prometheus-msteams:latest
-    environment:
-      TEAMS_INCOMING_WEBHOOK_URL: "https://<teams-webhook-url>"
-      TEAMS_REQUEST_URI: "alertmanager"
-    ports:
-      - "2000:2000"
-```
-Alertmanager config:
-```yaml
-receivers:
-  - name: "teams-bridge"
-    webhook_configs:
-      - url: "http://prometheus-msteams:2000/alertmanager"
-        send_resolved: true
-```
-
----
-
 ### 📜 3. Prometheus Alert Rules
 Create `rules_node.yml`:
 ```yaml
@@ -75,7 +52,7 @@ groups:
         severity: warning
       annotations:
         summary: "High CPU usage on {{ $labels.instance }}"
-        description: "CPU > 85% for 10m (current: {{ printf "%.2f" $value }}%)."
+        description: "CPU > 85% for 10m (current: {{ printf \"%.2f\" $value }}%)."
 
     - alert: HighMemoryUtilization
       expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 85
@@ -84,17 +61,16 @@ groups:
         severity: warning
       annotations:
         summary: "High memory usage on {{ $labels.instance }}"
-        description: "Mem utilization > 85% for 10m (current: {{ printf "%.2f" $value }}%)."
+        description: "Mem utilization > 85% for 10m (current: {{ printf \"%.2f\" $value }}%)."
 
     - alert: FilesystemSpaceLow
-      expr: (1 - (node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs|devtmpfs"} /
-                  node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs|devtmpfs"})) * 100 > 85
+      expr: (1 - (node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs|devtmpfs"} / node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs|devtmpfs"})) * 100 > 85
       for: 15m
       labels:
         severity: warning
       annotations:
         summary: "Low disk space on {{ $labels.instance }} ({{ $labels.mountpoint }})"
-        description: "FS utilization > 85% for 15m (current: {{ printf "%.2f" $value }}%)."
+        description: "FS utilization > 85% for 15m (current: {{ printf \"%.2f\" $value }}%)."
 ```
 
 ---
@@ -102,13 +78,17 @@ groups:
 ### 🛠 4. Prometheus Config
 Add to `prometheus.yml`:
 ```yaml
-rule_files:
-  - "/etc/prometheus/rules_node.yml"
-
+# Alertmanager configuration
 alerting:
   alertmanagers:
     - static_configs:
-        - targets: ["alertmanager:9093"]
+        - targets:
+            - "localhost:9093"
+
+# Load rules once and periodically evaluate them according to the global 'evaluation_interval'.
+rule_files:
+  - "/etc/prometheus/rules_node.yml"
+  # - "second_rules.yml"
 ```
 
 ---
