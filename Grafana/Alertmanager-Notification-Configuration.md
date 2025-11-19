@@ -27,11 +27,11 @@ global:
   resolve_timeout: 1m
 
 route:
-  receiver: "teams"
+  receiver: "msteams"
   group_by: ["alertname", "instance"]
-  group_wait: 30s
-  group_interval: 5m
-  repeat_interval: 3h
+  group_wait: 30s # Wait before sending the first notification (to allow grouping).
+  group_interval: 5m # Minimum time between notification for the same group.
+  repeat_interval: 3h # How often to resent if the alert is still firing.
 
 receivers:
   - name: "teams"
@@ -46,32 +46,45 @@ Create `rules_node.yml` file under `~/prometheus/prometheus_config/` directory:
 groups:
   - name: node_resource_alerts
     rules:
+    # CPU Utilization Alert
     - alert: HighCPUUtilization
-      expr: avg by (instance) (rate(node_cpu_seconds_total{mode!="idle"}[5m])) * 100 > 85
+      expr: avg by (instance) (rate(node_cpu_seconds_total{mode!="idle"}[5m])) * 100 > 80
       for: 10m
       labels:
-        severity: warning
+        severity: '{{ if gt $value 90.0 }}critical{{ else }}warning{{ end }}'
       annotations:
-        summary: "High CPU usage on {{ $labels.instance }}"
-        description: "CPU > 85% for 10m (current: {{ printf \"%.2f\" $value }}%)."
+        summary: 'High CPU usage on {{ $labels.instance }}'
+        description: '{{ if gt $value 90.0 }}CPU > 90% (Critical){{ else }}CPU > 80% (Warning){{ end }} for 10m (current: {{ printf "%.2f" $value }}%).'
 
+    # Memory Utilization Alert
     - alert: HighMemoryUtilization
-      expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 85
+      expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 80
       for: 10m
       labels:
-        severity: warning
+        severity: '{{ if gt $value 90.0 }}critical{{ else }}warning{{ end }}'
       annotations:
-        summary: "High memory usage on {{ $labels.instance }}"
-        description: "Mem utilization > 85% for 10m (current: {{ printf \"%.2f\" $value }}%)."
+        summary: 'High memory usage on {{ $labels.instance }}'
+        description: '{{ if gt $value 90.0 }}Mem utilization > 90% (Critical){{ else }}Mem utilization > 80% (Warning){{ end }} for 10m (current: {{ printf "%.2f" $value }}%).'
 
+    # Filesystem Space Alert
     - alert: FilesystemSpaceLow
-      expr: (1 - (node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs|devtmpfs"} / node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs|devtmpfs"})) * 100 > 85
+      expr: (1 - (node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs|devtmpfs"} / node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs|devtmpfs"})) * 100 > 80
       for: 15m
       labels:
-        severity: warning
+        severity: '{{ if gt $value 90.0 }}critical{{ else }}warning{{ end }}'
       annotations:
-        summary: "Low disk space on {{ $labels.instance }} ({{ $labels.mountpoint }})"
-        description: "FS utilization > 85% for 15m (current: {{ printf \"%.2f\" $value }}%)."
+        summary: 'Low disk space on {{ $labels.instance }} ({{ $labels.mountpoint }})'
+        description: '{{ if gt $value 90.0 }}FS utilization > 90% (Critical){{ else }}FS utilization > 80% (Warning){{ end }} for 15m (current: {{ printf "%.2f" $value }}%).'
+
+    # Network Bandwidth Utilization Alert
+    - alert: HighNetworkBandwidthUtilization
+      expr: ((rate(node_network_receive_bytes_total[5m]) + rate(node_network_transmit_bytes_total[5m])) / node_network_speed_bytes) * 100 > 80
+      for: 10m
+      labels:
+        severity: '{{ if gt $value 90.0 }}critical{{ else }}warning{{ end }}'
+      annotations:
+        summary: 'High network bandwidth usage on {{ $labels.instance }} ({{ $labels.device }})'
+        description: '{{ if gt $value 90.0 }}Network utilization > 90% (Critical){{ else }}Network utilization > 80% (Warning){{ end }} for 10m (current: {{ printf "%.2f" $value }}%).'
 ```
 
 ---
