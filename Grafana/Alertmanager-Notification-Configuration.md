@@ -34,7 +34,7 @@ route:
   repeat_interval: 3h # How often to resent if the alert is still firing.
 
 receivers:
-  - name: "teams"
+  - name: "msteams"
     msteamsv2_configs:
       - webhook_url: "https://<teams-webhook-url>"
         send_resolved: true
