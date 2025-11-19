@@ -27,16 +27,45 @@ global:
   resolve_timeout: 1m
 
 route:
-  receiver: "msteams"
-  group_by: ["alertname", "instance"]
+  receiver: "default"   # fallback
+  group_by: ["instance", "job"]
   group_wait: 30s # Wait before sending the first notification (to allow grouping).
   group_interval: 5m # Minimum time between notification for the same group.
-  repeat_interval: 3h # How often to resent if the alert is still firing.
+  repeat_interval: 10m # How often to resent if the alert is still firing.
+
+  # --- Child routes based on job name ---
+  routes:
+    # Linux job alerts
+    - match:
+        job: "DC1-ALL-LINUX-SERVERS"
+      receiver: "msteams_linux"
+
+    # Windows job alerts
+    # - match:
+    #     job: "DC1-ALL-WINDOWS-SERVERS"
+    #   receiver: "msteams_windows"
+
+    # Add more groups if needed
+    # - match:
+    #     job: "database-job"
+    #   receiver: "msteams_database"
+
 
 receivers:
-  - name: "msteams"
+  - name: "msteams_linux"
     msteamsv2_configs:
-      - webhook_url: "https://<teams-webhook-url>"
+      - webhook_url: "https://teams-webhook-url-for-linux"
+        send_resolved: true
+
+#  - name: "msteams_windows"
+#    msteamsv2_configs:
+#      - webhook_url: "https://teams-webhook-url-for-windows"
+#        send_resolved: true
+
+  # fallback if no route matches
+  - name: "default"
+    msteamsv2_configs:
+      - webhook_url: "https://fallback-webhook"
         send_resolved: true
 ```
 
