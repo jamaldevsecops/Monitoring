@@ -231,6 +231,8 @@ or,
 docker-compose restart alertmanager
 docker-compose restart prometheues
 ```
+On Prometheus:
+<img width="1662" height="356" alt="image" src="https://github.com/user-attachments/assets/a29b3c23-42d1-4dd7-8c7d-fef00bd3c7ca" />
 
 ---
 
