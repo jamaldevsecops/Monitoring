@@ -40,7 +40,7 @@ receivers:
         send_resolved: true
 ```
 
-### 📜 3. Prometheus Alert Rules
+### 📜 3. Prometheus Alert Rules Options: 1
 Create `rules_node.yml` file under `~/prometheus/prometheus_config/` directory:
 ```yaml
 groups:
@@ -86,7 +86,92 @@ groups:
         summary: 'High network bandwidth usage on {{ $labels.instance }} ({{ $labels.device }})'
         description: '{{ if gt $value 90.0 }}Network utilization > 90% (Critical){{ else }}Network utilization > 80% (Warning){{ end }} for 10m (current: {{ printf "%.2f" $value }}%).'
 ```
+### 📜 3. Prometheus Alert Rules Options: 2
+- All filesystems (except tmpfs, overlay, squashfs, devtmpfs):
+  - Warning: >80% and ≤90%
+  - Critical: >90%
+- Only for /LOGS and /document:
+  - Warning: >95% and ≤97%
+  - Critical: >97%
 
+Create `rules_node.yml` file under `~/prometheus/prometheus_config/` directory:
+```yaml
+groups:
+  - name: node_resource_alerts
+    rules:
+    # CPU Utilization Alert
+    - alert: HighCPUUtilization
+      expr: avg by (instance) (rate(node_cpu_seconds_total{mode!="idle"}[5m])) * 100 > 80
+      for: 10m
+      labels:
+        severity: '{{ if gt $value 90.0 }}critical{{ else }}warning{{ end }}'
+      annotations:
+        summary: 'High CPU usage on {{ $labels.instance }}'
+        description: '{{ if gt $value 90.0 }}CPU > 90% (Critical){{ else }}CPU > 80% (Warning){{ end }} for 10m (current: {{ printf "%.2f" $value }}%).'
+
+    # Memory Utilization Alert
+    - alert: HighMemoryUtilization
+      expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 80
+      for: 10m
+      labels:
+        severity: '{{ if gt $value 90.0 }}critical{{ else }}warning{{ end }}'
+      annotations:
+        summary: 'High memory usage on {{ $labels.instance }}'
+        description: '{{ if gt $value 90.0 }}Mem utilization > 90% (Critical){{ else }}Mem utilization > 80% (Warning){{ end }} for 10m (current: {{ printf "%.2f" $value }}%).'
+
+    # Network Bandwidth Utilization Alert
+    - alert: HighNetworkBandwidthUtilization
+      expr: ((rate(node_network_receive_bytes_total[5m]) + rate(node_network_transmit_bytes_total[5m])) / node_network_speed_bytes) * 100 > 80
+      for: 10m
+      labels:
+        severity: '{{ if gt $value 90.0 }}critical{{ else }}warning{{ end }}'
+      annotations:
+        summary: 'High network bandwidth usage on {{ $labels.instance }} ({{ $labels.device }})'
+        description: '{{ if gt $value 90.0 }}Network utilization > 90% (Critical){{ else }}Network utilization > 80% (Warning){{ end }} for 10m (current: {{ printf "%.2f" $value }}%).'
+
+
+    # Filesystem Space Alert (LOGS/document have different thresholds)
+    - alert: FilesystemSpaceLow
+      expr: |
+        (
+          # for /LOGS and /document: usage >95%
+          (1 - (node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs|devtmpfs", mountpoint=~"/LOGS|/document"} 
+                / node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs|devtmpfs", mountpoint=~"/LOGS|/document"})) * 100 > 95
+        )
+        OR
+        (
+          # for all others: usage >80%
+          (1 - (node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs|devtmpfs", mountpoint!~"/LOGS|/document"} 
+                / node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs|devtmpfs", mountpoint!~"/LOGS|/document"})) * 100 > 80
+        )
+      for: 15m
+
+      labels:
+        severity: >
+          {{ if or (eq $labels.mountpoint "/LOGS") (eq $labels.mountpoint "/document") }}
+            {{ if gt $value 97.0 }}critical{{ else }}warning{{ end }}
+          {{ else }}
+            {{ if gt $value 90.0 }}critical{{ else }}warning{{ end }}
+          {{ end }}
+
+      annotations:
+        summary: "Low disk space on {{ $labels.instance }} ({{ $labels.mountpoint }})"
+        description: >
+          {{ if or (eq $labels.mountpoint "/LOGS") (eq $labels.mountpoint "/document") }}
+            {{ if gt $value 97.0 }}
+              FS utilization > 97% (Critical)
+            {{ else }}
+              FS utilization > 95% (Warning)
+            {{ end }}
+          {{ else }}
+            {{ if gt $value 90.0 }}
+              FS utilization > 90% (Critical)
+            {{ else }}
+              FS utilization > 80% (Warning)
+            {{ end }}
+          {{ end }}
+          for 15m (current: {{ printf "%.2f" $value }}%).
+```
 ---
 
 ### 🛠 4. Prometheus Config
