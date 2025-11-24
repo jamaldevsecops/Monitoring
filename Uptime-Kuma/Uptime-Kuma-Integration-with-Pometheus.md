@@ -1,6 +1,7 @@
 # Integrate Uptime‑Kuma with Prometheus & Grafana
 
 > **Goal:** Scrape Uptime‑Kuma metrics with Prometheus and display them in Grafana using dashboard **ID 18278**.
+> Source: https://github.com/louislam/uptime-kuma/wiki/Prometheus-Integration
 
 ---
 
