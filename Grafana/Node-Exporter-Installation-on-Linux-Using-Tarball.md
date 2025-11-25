@@ -13,7 +13,7 @@ This SOP outlines the procedure for deploying **Node Exporter** on a Linux syste
 
 ```bash
 cd /opt
-sudo wget https://github.com/prometheus/node_exporter/releases/download/v1.8.2/node_exporter-1.10.2.linux-amd64.tar.gz
+sudo wget https://github.com/prometheus/node_exporter/releases/download/v1.10.2/node_exporter-1.10.2.linux-amd64.tar.gz
 ```
 
 If using a proxy:
