@@ -36,7 +36,7 @@ sudo mv node_exporter-1.10.2.linux-amd64 node_exporter
 ## 👤 Step 2: Create Node Exporter User
 
 ```bash
-sudo useradd --no-create-home --shell /bin/false nodeusr
+sudo useradd --no-create-home --shell /bin/false node_exporter
 ```
 
 ---
@@ -47,7 +47,7 @@ Move the binary and set ownership:
 
 ```bash
 sudo cp /opt/node_exporter/node_exporter /usr/local/bin/
-sudo chown nodeusr:nodeusr /usr/local/bin/node_exporter
+sudo chown node_exporter:node_exporter /usr/local/bin/node_exporter
 ```
 
 ---
