@@ -69,13 +69,13 @@ Wants=network-online.target
 After=network-online.target
 
 [Service]
-User=nodeusr
-Group=nodeusr
+User=node_exporter
+Group=node_exporter
 Type=simple
-ExecStart=/usr/local/bin/node_exporter \  
-  --collector.logind \  
-  --collector.processes \  
-  --collector.systemd \  
+ExecStart=/usr/local/bin/node_exporter \
+  --collector.logind \
+  --collector.processes \
+  --collector.systemd \
   --collector.tcpstat
 
 [Install]
