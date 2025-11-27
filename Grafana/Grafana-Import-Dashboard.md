@@ -1,5 +1,5 @@
 
-# 📘 SOP: Importing Grafana Dashboard (ID 11074) and Applying MB/s Queries with Thresholds
+# 📘 SOP: Importing Grafana Dashboard (ID 11074) and Applying Mbps Queries with Thresholds
 
 ## 🟦 1. Import the Dashboard
 1. Open **Grafana**.
@@ -11,40 +11,33 @@
 
 ---
 
-## 🟧 2. Update Panels with MB/s Queries
+## 🟧 2. Update Panels with Mbps Queries
 
-Replace the default PromQL expressions with the following **Megabytes per Second (MB/s)** versions.
+Replace the default PromQL expressions with the following **Megabits per Second (Mb/s)** versions.
 
-### 💽 Disk Read (MB/s)
+### 💽 Disk Read (Mb/s)
 ```promql
-max(
-  rate(node_disk_read_bytes_total{origin_prometheus=~"$origin_prometheus", job=~"$job"}[$interval])
-  / (1024 * 1024)
-) by (instance)
+max(rate(node_disk_read_bytes_total{origin_prometheus=~"$origin_prometheus", job=~"$job"}[$interval])* 8 / 1000000) by (instance)
 ```
 
-### 💽 Disk Write (MB/s)
+### 💽 Disk Write (Mb/s)
 ```promql
-max(
-  rate(node_disk_written_bytes_total{origin_prometheus=~"$origin_prometheus", job=~"$job"}[$interval])
-  / (1024 * 1024)
-) by (instance)
+max(rate(node_disk_written_bytes_total{origin_prometheus=~"$origin_prometheus", job=~"$job"}[$interval])* 8 / 1000000) by (instance)
 ```
 
-### 🌐 Network Receive (MB/s)
+### 🌐 Network Receive/Download (Mb/s)
 ```promql
-max(
-  rate(node_network_receive_bytes_total{origin_prometheus=~"$origin_prometheus", job=~"$job"}[$interval])
-  / (1024 * 1024)
-) by (instance)
+max(rate(node_network_receive_bytes_total{origin_prometheus=~"$origin_prometheus", job=~"$job"}[$interval]) * 8 / 1000000) by (instance)
 ```
 
-### 🌐 Network Transmit (MB/s)
+### 🌐 Network Transmit/Upload (Mb/s)
 ```promql
-max(
-  rate(node_network_transmit_bytes_total{origin_prometheus=~"$origin_prometheus", job=~"$job"}[$interval])
-  / (1024 * 1024)
-) by (instance)
+max(rate(node_network_transmit_bytes_total{origin_prometheus=~"$origin_prometheus", job=~"$job"}[$interval]) * 8 / 1000000) by (instance)
+```
+
+### Load Average (5m) 
+```promql
+(avg(node_load5{origin_prometheus=~"$origin_prometheus", job=~"$job"}) by (instance) / count(node_cpu_seconds_total{mode="idle", origin_prometheus=~"$origin_prometheus", job=~"$job"}) by (instance)) * 100
 ```
 
 ---
@@ -52,17 +45,17 @@ max(
 ## 🟩 3. Configure Legend Names
 Set the **Legend** fields to help with overrides:
 
-- `Disk Read (MB/s) - {{instance}}`
-- `Disk Write (MB/s) - {{instance}}`
-- `Net Recv (MB/s) - {{instance}}`
-- `Net Tx (MB/s) - {{instance}}`
+- `Disk Read (Mb/s) - {{instance}}`
+- `Disk Write (Mb/s) - {{instance}}`
+- `Net Recv (Mb/s) - {{instance}}`
+- `Net Tx (Mb/s) - {{instance}}`
 
 ---
 
 ## 🟪 4. Set Display Units
 1. Open the panel.
 2. Go to **Field → Unit**.
-3. Select **Data rate → megabytes per second (MB/s)**.
+3. Select **Data rate → Megabits per second (Mb/s)**.
 
 ---
 
@@ -72,13 +65,13 @@ Set the **Legend** fields to help with overrides:
 1. In the panel editor, scroll to **Overrides**.
 2. Click **Add field override**.
 3. Choose **Fields with name**.
-4. Match the legend or use regex (example: `Disk Read (MB/s).*`).
+4. Match the legend or use regex (example: `Disk Read (Mb/s).*`).
 5. Add property → **Thresholds**.
 
 ### 📊 Recommended Threshold Values
 
 #### 💽 Disk Read / Write
-| Color | Value (MB/s) |
+| Color | Value (Mb/s) |
 |-------|--------------|
 | 🟩 Green | 0 |
 | 🟨 Yellow | 20 |
@@ -86,7 +79,7 @@ Set the **Legend** fields to help with overrides:
 | 🟥 Red | 200 |
 
 #### 🌐 Network Receive / Transmit
-| Color | Value (MB/s) |
+| Color | Value (Mb/s) |
 |-------|--------------|
 | 🟩 Green | 0 |
 | 🟨 Yellow | 10 |
