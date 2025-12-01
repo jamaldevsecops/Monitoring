@@ -1,6 +1,6 @@
 # Pressure Simulation
 
-🔥 1. CPU Load Generator (Adjustable Load % or Core Count)
+🔥 1. CPU Load Generator (Adjustable Load % or Core Count)  
 Script: `cpu-load-variable.sh`
 ```
 #!/bin/bash
@@ -39,7 +39,7 @@ done
 wait
 ```
 
-🧠 Memory Pressure + Swap Load Script
+🧠 Memory Pressure + Swap Load Script  
 Script: `memory-pressure-swap.sh`
 ```
 #!/bin/bash
@@ -90,7 +90,7 @@ while true; do
     sleep 1
 done
 ```
-✅ Network Load Script With Adjustable Mbps
+✅ Network Load Script With Adjustable Mbps  
 Script: `net-load-variable.sh`
 ```
 #!/bin/bash
@@ -131,7 +131,7 @@ while true; do
     sleep 1
 done
 ```
-🔥 Disk Read + Write Load Generator (Adjustable MB/s)
+🔥 Disk Read + Write Load Generator (Adjustable MB/s)  
 Script: `disk-load-variable.sh`
 ```
 #!/bin/bash
