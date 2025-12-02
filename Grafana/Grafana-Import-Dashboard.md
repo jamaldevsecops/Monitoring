@@ -15,14 +15,14 @@
 
 Replace the default PromQL expressions with the following **Megabits per Second (Mb/s)** versions.
 
-### 💽 Disk Read (Mb/s)
+### 💽 Disk Read (MB/s)
 ```promql
-max(rate(node_disk_read_bytes_total{origin_prometheus=~"$origin_prometheus", job=~"$job"}[$interval])* 8 / 1000000) by (instance)
+max(rate(node_disk_read_bytes_total{origin_prometheus=~"$origin_prometheus", job=~"$job"}[$interval]) / 1000000) by (instance)
 ```
 
-### 💽 Disk Write (Mb/s)
+### 💽 Disk Write (MB/s)
 ```promql
-max(rate(node_disk_written_bytes_total{origin_prometheus=~"$origin_prometheus", job=~"$job"}[$interval])* 8 / 1000000) by (instance)
+max(rate(node_disk_written_bytes_total{origin_prometheus=~"$origin_prometheus", job=~"$job"}[$interval]) / 1000000) by (instance)
 ```
 
 ### 🌐 Network Receive/Download (Mb/s)
