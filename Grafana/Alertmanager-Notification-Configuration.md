@@ -87,13 +87,13 @@ groups:
 
     # High System Load (5m avg) Alert
     - alert: High-System-Load
-      expr: (node_load5 * 100 / ignoring(job) (count by (instance) (count by (instance, cpu) (node_cpu_seconds_total)))) > 85
+      expr: (node_load5 * 100) / on(instance)(count(count(node_cpu_seconds_total) by (instance, cpu)) by (instance)) >= 85
       for: 5m
       labels:
-        severity: '{{ if gt $value 90.0 }}critical{{ else }}warning{{ end }}'
+        severity: '{{ if ge $value 90.0 }}critical{{ else }}warning{{ end }}'
       annotations:
         summary: 'High system load (5m average) on {{ $labels.instance }}'
-        description: '{{ if gt $value 90.0 }}Critical{{ else }}Warning{{ end }} alert on {{ $labels.instance }} in last 5 minutes. Current system load {{ printf "%.2f" $value }}%. Warning threshold: 85%, Critical threshold: 90%.'
+        description: '{{ if ge $value 90.0 }}Critical{{ else }}Warning{{ end }} alert on {{ $labels.instance }} in last 5 minutes. Current Load average (5m) is {{ printf "%.2f" $value }}%. Warning threshold: 85%, Critical threshold: 90%.'
 
     # High Memory Usage Alert
     - alert: High-Memory-Usage
@@ -190,13 +190,13 @@ groups:
 
     # High System Load (5m avg) Alert
     - alert: High-System-Load
-      expr: (node_load5 * 100 / ignoring(job) (count by (instance) (count by (instance, cpu) (node_cpu_seconds_total)))) > 85
+      expr: (node_load5 * 100) / on(instance)(count(count(node_cpu_seconds_total) by (instance, cpu)) by (instance)) >= 85
       for: 5m
       labels:
-        severity: '{{ if gt $value 90.0 }}critical{{ else }}warning{{ end }}'
+        severity: '{{ if ge $value 90.0 }}critical{{ else }}warning{{ end }}'
       annotations:
         summary: 'High system load (5m average) on {{ $labels.instance }}'
-        description: '{{ if gt $value 90.0 }}Critical{{ else }}Warning{{ end }} alert on {{ $labels.instance }} in last 5 minutes. Current system load {{ printf "%.2f" $value }}%. Warning threshold: 85%, Critical threshold: 90%.'
+        description: '{{ if ge $value 90.0 }}Critical{{ else }}Warning{{ end }} alert on {{ $labels.instance }} in last 5 minutes. Current Load average (5m) is {{ printf "%.2f" $value }}%. Warning threshold: 85%, Critical threshold: 90%.'
 
     # High Memory Usage Alert
     - alert: High-Memory-Usage
