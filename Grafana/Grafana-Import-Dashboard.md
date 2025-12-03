@@ -45,8 +45,8 @@ max(rate(node_network_transmit_bytes_total{origin_prometheus=~"$origin_prometheu
 ## 🟩 3. Configure Legend Names
 Set the **Legend** fields to help with overrides:
 
-- `Disk Read (Mb/s) - {{instance}}`
-- `Disk Write (Mb/s) - {{instance}}`
+- `Disk Read (MB/s) - {{instance}}`
+- `Disk Write (MB/s) - {{instance}}`
 - `Net Recv (Mb/s) - {{instance}}`
 - `Net Tx (Mb/s) - {{instance}}`
 
